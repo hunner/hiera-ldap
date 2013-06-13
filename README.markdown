@@ -7,7 +7,7 @@ or 'hieravars' attributes.
 
 This is by no means finished.
 
-- It should accept auth parameters
+- It wraps the pramaters to Net::LDAP.new so anything you can do there you can do here
 
 
 ## Ldap example:
