@@ -46,8 +46,6 @@ class Hiera
           base = conf[:base]
           Hiera.debug("Searching on base: #{base}")
 
-          puppetclasses = []
-          puppetvars = {}
           answer = {}
 
           begin
@@ -56,7 +54,7 @@ class Hiera
             @connection.search(:filter => filter) do |entry|
               entry.each do |attribute, values|
                 Hiera.debug( "   #{attribute}:")
-                answer[attribute] = values
+                answer[attribute.to_s] = values
                 values.each do |value|
                    Hiera.debug( "   ---->#{value}:")
                 end
