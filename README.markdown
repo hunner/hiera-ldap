@@ -72,4 +72,8 @@ This is by no means finished.
     }
 
 
+# Authors
 
+  - Hunter Haugen @hunner
+  - Spencer Krum @nibalizer
+  - Sage Imel @nightfly
