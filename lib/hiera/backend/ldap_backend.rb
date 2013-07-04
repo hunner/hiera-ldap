@@ -46,19 +46,22 @@ class Hiera
           base = conf[:base]
           Hiera.debug("Searching on base: #{base}")
 
-          answer = {}
+          answer = []
 
           begin
             filter = Net::LDAP::Filter.from_rfc4515(key)
             treebase = conf[:base]
-            @connection.search(:filter => filter) do |entry|
-              entry.each do |attribute, values|
-                Hiera.debug( "   #{attribute}:")
-                answer[attribute.to_s] = values
-                values.each do |value|
-                   Hiera.debug( "   ---->#{value}:")
+	    searchresult = @connection.search(:filter => filter)
+
+	    for i in 0..searchresult.length-1 do 
+		answer[i] = {}
+                searchresult[i].each do |attribute, values|
+                   Hiera.debug( "   #{attribute}:")
+                   answer[i][attribute.to_s] = values
+                   values.each do |value|
+                      Hiera.debug( "   ---->#{value}:")
+                   end
                 end
-              end
             end
           rescue Exception => e
             Hiera.debug("Exception: #{e}")
@@ -67,7 +70,7 @@ class Hiera
 
         end
 
-        return answer unless answer == {}
+        return answer unless answer == []
       end
     end
   end
