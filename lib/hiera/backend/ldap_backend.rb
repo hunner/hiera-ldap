@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'net/ldap'
 
-# Monkey path Net::LDAP::Connection to ensure SSL certs aren't verified
+# Monkey patch Net::LDAP::Connection to ensure SSL certs aren't verified
 class Net::LDAP::Connection
   def self.wrap_with_ssl(io)
     raise Net::LDAP::LdapError, "OpenSSL is unavailable" unless Net::LDAP::HasOpenSSL
@@ -35,7 +35,6 @@ class Hiera
       end
 
       def lookup(key, scope, order_override, resolution_type)
-        #answer = Backend.empty_answer(resolution_type)
         answer = nil
 
         Hiera.debug("Looking up #{key} in LDAP backend")
@@ -51,17 +50,17 @@ class Hiera
           begin
             filter = Net::LDAP::Filter.from_rfc4515(key)
             treebase = conf[:base]
-	    searchresult = @connection.search(:filter => filter)
+            searchresult = @connection.search(:filter => filter)
 
-	    for i in 0..searchresult.length-1 do 
-		answer[i] = {}
-                searchresult[i].each do |attribute, values|
-                   Hiera.debug( "   #{attribute}:")
-                   answer[i][attribute.to_s] = values
-                   values.each do |value|
-                      Hiera.debug( "   ---->#{value}:")
-                   end
-                end
+            for i in 0..searchresult.length-1 do 
+              answer[i] = {}
+              searchresult[i].each do |attribute, values|
+                Hiera.debug( "   #{attribute}:")
+                answer[i][attribute.to_s] = values
+                values.each do |value|
+                  Hiera.debug( "   ---->#{value}:")
+                 end
+              end
             end
           rescue Exception => e
             Hiera.debug("Exception: #{e}")
