@@ -41,7 +41,7 @@ class Hiera
 
         Backend.datasources(scope, order_override) do |source|
           Hiera.debug("Looking for data source #{source}")
-          conf = Config[:ldap] 
+          conf = Config[:ldap]
           base = conf[:base]
           Hiera.debug("Searching on base: #{base}")
 
@@ -52,7 +52,7 @@ class Hiera
             treebase = conf[:base]
             searchresult = @connection.search(:filter => filter)
 
-            for i in 0..searchresult.length-1 do 
+            for i in 0..searchresult.length-1 do
               answer[i] = {}
               searchresult[i].each do |attribute, values|
                 Hiera.debug( "   #{attribute}:")
