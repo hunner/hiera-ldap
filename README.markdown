@@ -1,14 +1,12 @@
 # hiera-ldap backend
 
-Unfortunately this will still be clunky because LDAP doesn't support complex
-data structures, nor arbitrary keys other than what is defined in its schema.
-So basically ruby hashes and arrays have to be encoded in the LDAP 'puppetvars'
-or 'hieravars' attributes.
+This module allows hiera to look up entries in LDAP. It will return an array of every matching entry, with that entry represented as a hash of attribute => value. For multivalued attributes, they exist as multiattribute => [attrib1, attrib2, attrib3].
 
-This is by no means finished.
+# Installation
 
-- It wraps the pramaters to Net::LDAP.new so anything you can do there you can do here
+This module can be placed in your puppet module path and will be pluginsync'd to the master.
 
+# Use
 
 ## Ldap example:
 
@@ -37,13 +35,13 @@ This is by no means finished.
 <pre>
 
 :ldap:
-  :base: ou=People,dc=catnip
+  :base: ou=People,dc=cat,dc=pdx,dc=edu
   :host: ldap.cat.pdx.edu
   :port: 636
   :encryption: :simple_tls
   :auth:
     :method: :simple
-    :username: uid=network,ou=Netgroup,dc=catnip
+    :username: uid=network,ou=Netgroup,dc=cat,dc=pdx,dc=edu
     :password: PASSWORD
 
 </pre>
@@ -71,9 +69,20 @@ This is by no means finished.
       comment    => $rooter_info['gecos'],
     }
 
+# Details
+
+- It wraps the pramaters to Net::LDAP.new so anything you can do there you can do here
+
+
+# Advanced
+
+The key being looked up is actually processsed just like rfc4515 so you can use advanced ldap searches:
+
+    hiera('(|(uid=nibz)(uidNumber=1861))')
 
 # Authors
 
-  - Hunter Haugen @hunner
-  - Spencer Krum @nibalizer
-  - Sage Imel @nightfly
+  - Hunter Haugen    http://github.com/hunner
+  - Spencer Krum     http://github.com/nibalizer
+  - Sage Imel        http://github.com/nightfly
+  - Fabio Rauber     http://github.com/fabiorauber
