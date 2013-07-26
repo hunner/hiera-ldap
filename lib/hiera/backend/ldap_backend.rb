@@ -1,71 +1,75 @@
+require 'rubygems'
+require 'net/ldap'
+
+# Monkey patch Net::LDAP::Connection to ensure SSL certs aren't verified
+class Net::LDAP::Connection
+  def self.wrap_with_ssl(io)
+    raise Net::LDAP::LdapError, "OpenSSL is unavailable" unless Net::LDAP::HasOpenSSL
+    ctx = OpenSSL::SSL::SSLContext.new
+    ctx.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    conn = OpenSSL::SSL::SSLSocket.new(io, ctx)
+    conn.connect
+    conn.sync_close = true
+
+    conn.extend(GetbyteForSSLSocket) unless conn.respond_to?(:getbyte)
+
+    conn
+  end
+end
+
 class Hiera
   module Backend
     class Ldap_backend
       def initialize
-        require 'ldap'
+        conf = Config[:ldap]
+        @base = conf[:base]
 
         Hiera.debug("Hiera LDAP backend starting")
-        auth = {
-          :method => :simple,
-          :username => 'uid=network,ou=Netgroup,dc=catnip',
-          :password => 'sedLdapPassword'
-        }
-        @connection = Net::LDAP.open(:host => 'ldap.cat.pdx.edu', :port => 636, :auth => auth, :encryption => :simple_tls)
+
+        @connection = Net::LDAP.new(
+          :host       => conf[:host],
+          :port       => conf[:port],
+          :auth       => conf[:auth],
+          :base       => conf[:base],
+          :encryption => conf[:encryption])
       end
 
       def lookup(key, scope, order_override, resolution_type)
-        answer = Backend.empty_answer(resolution_type)
+        answer = nil
 
         Hiera.debug("Looking up #{key} in LDAP backend")
 
         Backend.datasources(scope, order_override) do |source|
           Hiera.debug("Looking for data source #{source}")
+          conf = Config[:ldap]
+          base = conf[:base]
+          Hiera.debug("Searching on base: #{base}")
 
-          jsonfile = Backend.datafile(:json, scope, source, "json") || next
+          answer = []
 
-          data = JSON.parse(File.read(jsonfile))
-          puppetclasses = []
-          puppetvars = {}
+          begin
+            filter = Net::LDAP::Filter.from_rfc4515(key)
+            treebase = conf[:base]
+            searchresult = @connection.search(:filter => filter)
 
-          next if data.empty?
-          next unless data.include?(key)
-
-          #dc=afilias-int.info/dc=tor/cn=cctld1.tor.afilias-int.info
-          source = source.split('/').reverse
-
-          filter_attribute = source[0].split('=')
-          path = source[1,-1]
-          filter = Net::LDAP::Filter.eq(filter_attribute[0],filter_attribute[1])
-          attrs = ["puppetvars","hieravars"]
-
-          ldap.search(:base => [path,Config[backend][:base]].flatten.join(','), :filter => filter, :attributes => attrs) do |entry|
-            Array(*entry["puppetvars"]).each do |puppetvar|
-              begin
-                value = eval puppetvar
-                value << host unless host == ""
-              rescue SyntaxError => e
-                # Ignore invalid puppetvars
+            for i in 0..searchresult.length-1 do
+              answer[i] = {}
+              searchresult[i].each do |attribute, values|
+                Hiera.debug( "   #{attribute}:")
+                answer[i][attribute.to_s] = values
+                values.each do |value|
+                  Hiera.debug( "   ---->#{value}:")
+                 end
               end
             end
-            Array(*entry["puppetclasses"]).each do |memberNetgroup|
-              hosts += get_hosts(memberNetgroup) #get subgroups
-            end
+          rescue Exception => e
+            Hiera.debug("Exception: #{e}")
           end
-          # for array resolution we just append to the array whatever
-          # we find, we then goes onto the next file and keep adding to
-          # the array
-          #
-          # for priority searches we break after the first found data item
-          case resolution_type
-          when :array
-            answer << Backend.parse_answer(data[key], scope)
-          else
-            answer = Backend.parse_answer(data[key], scope)
-            break
-          end
+          Hiera.debug(answer)
+
         end
 
-        return answer
+        return answer unless answer == []
       end
     end
   end
