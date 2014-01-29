@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'net/ldap'
+require 'json'
 
 # Monkey patch Net::LDAP::Connection to ensure SSL certs aren't verified
 class Net::LDAP::Connection
@@ -17,6 +18,17 @@ class Net::LDAP::Connection
   end
 end
 
+class String
+  def valid_json?
+    begin
+      JSON.parse(self)
+      return true
+    rescue JSON::ParserError
+      return false
+    end
+  end
+end
+
 class Hiera
   module Backend
     class Ldap_backend
@@ -25,14 +37,24 @@ class Hiera
         @base = conf[:base]
 
         Hiera.debug("Hiera LDAP backend starting")
-
+        @searchattr = get_config_value(:attribute, "puppetVar")
         @connection = Net::LDAP.new(
           :host       => conf[:host],
-          :port       => conf[:port],
+          :port       => get_config_value(:port, "389"),
           :auth       => conf[:auth],
           :base       => conf[:base],
           :encryption => conf[:encryption])
       end
+
+      # Helper for parsing config. Does not Hiera provide one?
+      def get_config_value(label, default)
+        if Config.include?(:ldap) && Config[:ldap].include?(label)
+          Config[:ldap][label]
+        else
+          default
+        end
+      end
+
 
       def lookup(key, scope, order_override, resolution_type)
         answer = nil
@@ -45,31 +67,58 @@ class Hiera
           base = conf[:base]
           Hiera.debug("Searching on base: #{base}")
 
-          answer = []
-
           begin
-            filter = Net::LDAP::Filter.from_rfc4515(key)
+            filterstr = "(&(objectClass=puppetClient)(cn=#{source}))"
+            filter = Net::LDAP::Filter.from_rfc4515(filterstr)
             treebase = conf[:base]
             searchresult = @connection.search(:filter => filter)
 
-            for i in 0..searchresult.length-1 do
-              answer[i] = {}
-              searchresult[i].each do |attribute, values|
-                Hiera.debug( "   #{attribute}:")
-                answer[i][attribute.to_s] = values
-                values.each do |value|
-                  Hiera.debug( "   ---->#{value}:")
-                 end
+            answer = []
+
+            searchresult.each do |entry|
+              if entry["#{@searchattr}"]
+                Hiera.debug("Entry #{entry['cn']} has key #{@searchattr}: #{entry[@searchattr]}")
+                # Now we do have hiera data, let's see if the key we're looking for is here.
+                if entry[@searchattr].is_a? String
+                  # First turn string into single-value arrays.
+                  entry[@searchattr] = [entry[@searchattr]]
+                end
+                entry[@searchattr].each do |line|
+                  k, v = line.split "=", 2
+                  if k == key
+                    # Verify if boolean
+                    if v == "true"
+                      v = true
+                    end
+                    if v == "false"
+                      v = false
+                    end
+
+                    # Parse JSON
+                    if v.valid_json?
+		      v = JSON.parse(v)
+                    end
+                    
+		    # Construct response
+                    if answer
+                      if answer.is_a? String
+                        answer = [answer, v]
+                      else
+                        answer.push v
+                      end
+                    else
+                      answer = v
+                    end
+
+                  end
+                end
               end
             end
-          rescue Exception => e
-            Hiera.debug("Exception: #{e}")
           end
-          Hiera.debug(answer)
-
+          return answer unless answer == []
         end
-
-        return answer unless answer == []
+      rescue Exception => e
+            Hiera.debug("Exception: #{e}")
       end
     end
   end
