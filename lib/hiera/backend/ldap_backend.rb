@@ -50,7 +50,7 @@ class Hiera
           begin
             filter = Net::LDAP::Filter.from_rfc4515(key)
             treebase = conf[:base]
-            searchresult = @connection.search(:filter => filter)
+            searchresult = @connection.search(:filter => filter, :attributes => conf[:attributes])
 
             for i in 0..searchresult.length-1 do
               answer[i] = {}
