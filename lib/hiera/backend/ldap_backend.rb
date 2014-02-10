@@ -57,82 +57,101 @@ class Hiera
 
 
       def lookup(key, scope, order_override, resolution_type)
-        answer = nil
+        conf = Config[:ldap] 
 
-        Hiera.debug("Looking up #{key} in LDAP backend")
+        # Testing if the key is an arbitrary LDAP Search key
+        if key.split('')[0] == '(' and key.split('')[key.length-1] == ')'
+          answer = []
+          filter = Net::LDAP::Filter.from_rfc4515(key)
+          treebase = conf[:base]
+          Hiera.debug("Searching #{key} in LDAP backend, base #{treebase}.")
+          searchresult = @connection.search(:filter => filter)
 
-        Backend.datasources(scope, order_override) do |source|
-          Hiera.debug("Looking for data source #{source}")
-          conf = Config[:ldap]
-          base = conf[:base]
-          Hiera.debug("Searching on base: #{base}")
-
-          begin
-            filterstr = "(&(objectClass=puppetClient)(cn=#{source}))"
-            filter = Net::LDAP::Filter.from_rfc4515(filterstr)
-            treebase = conf[:base]
-            searchresult = @connection.search(:filter => filter)
-
-            answer = []
-
-            searchresult.each do |entry|
-              if entry[@searchattr] != []
-                Hiera.debug("Entry #{entry['cn']} has key #{@searchattr}: '#{entry[@searchattr]}'")
-                # Now we do have hiera data, let's see if the key we're looking for is here.
-
-                entry[@searchattr].each do |line|
-                  k, v = line.split "=", 2
-                  if k == key
-                    # Verify if boolean
-                    if v == "true"
-                      v = true
-                    end
-                    if v == "false"
-                      v = false
-                    end
-
-                    # Parse JSON
-                    if v.valid_json?
-		      v = JSON.parse(v)
-                    end
-                    
-		    # Construct response
-                    if answer
-                      if answer.is_a? String
-                        answer = [answer, v]
-                      else
-                        answer.push v
-                      end
-                    else
-                      answer = v
-                    end
-                  end #end if k == key
-                end #end entry[@searchattr].each
-
-              else #entry[@searchattr] is an empty array
-                 k = key.rpartition("::").last 
-                 Hiera.debug("Entry #{entry['cn']} has no #{@searchattr} key. Looking up for key #{k}.")
-                 entry[k].each do |line|
-                    # Construct response
-                    if answer
-                      if answer.is_a? String
-                        answer = [answer, line]
-                      else
-                        answer.push line
-                      end
-                    else
-                      answer = line
-                    end
-                 end
+          for i in 0..searchresult.length-1 do
+            answer[i] = {}
+            searchresult[i].each do |attribute, values|
+              Hiera.debug( " #{attribute}:")
+              answer[i][attribute.to_s] = values
+              values.each do |value|
+                Hiera.debug( " ---->#{value}:")
               end
-
-            end #end searchresult.each
-          end #end datasources
-          if answer == []
-            Hiera.debug("Answer is empty array.")
+            end
           end
+	  return answer unless answer == []
+        
+        # "Key" is an ordinary puppet variable
+        else
+          answer = []
+          Hiera.debug("Looking up #{key} in LDAP backend")
+
+          Backend.datasources(scope, order_override) do |source|
+            Hiera.debug("Looking for data source #{source}")
+            base = conf[:base]
+            Hiera.debug("Searching on base: #{base}")
+            begin
+              filterstr = "(&(objectClass=puppetClient)(cn=#{source}))"
+              filter = Net::LDAP::Filter.from_rfc4515(filterstr)
+              treebase = conf[:base]
+              searchresult = @connection.search(:filter => filter)
+
+
+              searchresult.each do |entry|
+                if entry[@searchattr] != []
+                  Hiera.debug("Entry #{entry['cn']} has key #{@searchattr}: '#{entry[@searchattr]}'")
+                  # Now we do have hiera data, let's see if the key we're looking for is here.
+                  entry[@searchattr].each do |line|
+                    k, v = line.split "=", 2
+                    if k == key
+                      # Verify if boolean
+                      if v == "true"
+                        v = true
+                      end
+                      if v == "false"
+                        v = false
+                      end
+
+                      # Parse JSON
+                      if v.valid_json?
+	                v = JSON.parse(v)
+                      end
+                    
+  		      # Construct response
+                      if answer
+                        if answer.is_a? String
+                          answer = [answer, v]
+                        else
+                          answer.push v
+                        end
+                      else
+                        answer = v
+                      end
+                    end #end if k == key
+                  end #end entry[@searchattr].each
+                end #end if entry[@searchattr] != []
+
+                if answer == [] 
+                   k = key.rpartition("::").last 
+                   Hiera.debug("Entry #{key} not found in #{@searchattr} key. Looking up for key #{k}.")
+                   entry[k].each do |line|
+                     # Construct response
+                     if answer
+                       if answer.is_a? String
+                         answer = [answer, line]
+                       else
+                         answer.push line
+                       end
+                     else
+                       answer = line
+                     end
+                     Hiera.debug("Found LDAP key #{k} with value: #{line}.")
+                   end
+                end
+
+              end #end searchresult.each
+            end #end datasources begin
+          end #end datasources
           return answer unless answer == []
-        end
+        end #end else
       rescue Exception => e
             Hiera.debug("Exception: #{e}")
       end
