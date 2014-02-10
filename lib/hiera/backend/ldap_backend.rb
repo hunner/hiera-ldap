@@ -76,13 +76,10 @@ class Hiera
             answer = []
 
             searchresult.each do |entry|
-              if entry["#{@searchattr}"]
-                Hiera.debug("Entry #{entry['cn']} has key #{@searchattr}: #{entry[@searchattr]}")
+              if entry[@searchattr] != []
+                Hiera.debug("Entry #{entry['cn']} has key #{@searchattr}: '#{entry[@searchattr]}'")
                 # Now we do have hiera data, let's see if the key we're looking for is here.
-                if entry[@searchattr].is_a? String
-                  # First turn string into single-value arrays.
-                  entry[@searchattr] = [entry[@searchattr]]
-                end
+
                 entry[@searchattr].each do |line|
                   k, v = line.split "=", 2
                   if k == key
@@ -109,11 +106,30 @@ class Hiera
                     else
                       answer = v
                     end
+                  end #end if k == key
+                end #end entry[@searchattr].each
 
-                  end
-                end
+              else #entry[@searchattr] is an empty array
+                 k = key.rpartition("::").last 
+                 Hiera.debug("Entry #{entry['cn']} has no #{@searchattr} key. Looking up for key #{k}.")
+                 entry[k].each do |line|
+                    # Construct response
+                    if answer
+                      if answer.is_a? String
+                        answer = [answer, line]
+                      else
+                        answer.push line
+                      end
+                    else
+                      answer = line
+                    end
+                 end
               end
-            end
+
+            end #end searchresult.each
+          end #end datasources
+          if answer == []
+            Hiera.debug("Answer is empty array.")
           end
           return answer unless answer == []
         end
