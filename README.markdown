@@ -86,3 +86,4 @@ The key being looked up is actually processsed just like rfc4515 so you can use 
   - Spencer Krum     http://github.com/nibalizer
   - Sage Imel        http://github.com/nightfly
   - Fabio Rauber     http://github.com/fabiorauber
+  - Arnaud Gomes     http://forge.ircam.fr/p/hiera-ldap-backend/
