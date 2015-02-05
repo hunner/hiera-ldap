@@ -1,0 +1,19 @@
+version: 1
+
+dn: ou=people,dc=example,dc=org
+objectClass: top
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=aa729,ou=people,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: Alexandra Adams
+sn: Adams
+givenName: Alexandra
+mail: alexandra@example.org
+uid: aa729
+# Password is "smada"
+userpassword: {SHA}pGlmZX1VOEdHHb30HZezeVNFxGM=

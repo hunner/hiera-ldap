@@ -1,0 +1,10 @@
+---
+:ldap:
+  :base: 'dc=example,dc=org'
+  :host: 'localhost'
+  :port: 3897
+  :encryption:
+  :auth:
+    :method: :simple
+    :username: cn=Alexandra Adams,ou=bar,dc=living,dc=com
+    :password: smada
