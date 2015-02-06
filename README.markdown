@@ -31,20 +31,35 @@ This module can be placed in your puppet module path and will be pluginsync'd to
     mail: nibz@cecs.pdx.edu
 
 
-## Configuration example
-<pre>
+## Configuration examples
 
+#### No encryption
+```yaml
 :ldap:
   :base: ou=People,dc=cat,dc=pdx,dc=edu
   :host: ldap.cat.pdx.edu
   :port: 636
-  :encryption: :simple_tls
   :auth:
     :method: :simple
     :username: uid=network,ou=Netgroup,dc=cat,dc=pdx,dc=edu
     :password: PASSWORD
+```
 
-</pre>
+#### More advanced, pointing to encryption keys
+```yaml
+:ldap:
+  :base: ou=People,dc=cat,dc=pdx,dc=edu
+  :host: ldap.cat.pdx.edu
+  :port: 636
+  :encryption:
+    :method: :simple_tls
+    :tls_options:
+      :ca_file: /etc/puppetlabs/puppet/hieradata/ldapcerts/cool_key.pem
+  :auth:
+    :method: :simple
+    :username: uid=network,ou=Netgroup,dc=cat,dc=pdx,dc=edu
+    :password: PASSWORD
+```
 
 ## Puppet example
 
@@ -72,7 +87,6 @@ This module can be placed in your puppet module path and will be pluginsync'd to
 # Details
 
 - It wraps the pramaters to Net::LDAP.new so anything you can do there you can do here
-
 
 # Advanced
 
