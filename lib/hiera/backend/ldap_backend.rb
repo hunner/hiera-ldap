@@ -31,7 +31,8 @@ class Hiera
           :port       => conf[:port],
           :auth       => conf[:auth],
           :base       => conf[:base],
-          :encryption => conf[:encryption])
+          :encryption => conf[:encryption]
+        )
       end
 
       def lookup(key, scope, order_override, resolution_type)
