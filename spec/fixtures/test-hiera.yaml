@@ -6,5 +6,5 @@
   :encryption:
   :auth:
     :method: :simple
-    :username: cn=Alexandra Adams,ou=bar,dc=living,dc=com
+    :username: uid=aa729,ou=people,dc=example,dc=org
     :password: smada

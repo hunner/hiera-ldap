@@ -10,6 +10,7 @@ class Hiera
         Hiera.stubs(:debug)
         Hiera.stubs(:warn)
         Hiera::Backend.stubs(:empty_answer).returns(nil)
+        @backend = Ldap_backend.new()
       end
 
       before(:all) do
@@ -35,7 +36,7 @@ class Hiera
             :port => 3897,
             :auth => {
               :method => :simple,
-              :username => 'cn=Alexandra Adams,ou=bar,dc=living,dc=com',
+              :username => 'uid=aa729,ou=people,dc=example,dc=org',
               :password => 'smada',
             },
             :base => 'dc=example,dc=org',
@@ -43,6 +44,18 @@ class Hiera
           )
 
           Ldap_backend.new()
+        end
+      end
+
+      describe "#lookup" do
+        it "should find values" do
+          results = @backend.lookup("cn=Alexandra Adams", {}, nil, :priority)
+          results.first["mail"].should eql ['alexandra@example.org']
+        end
+
+        it "should return nil if nothing found" do
+          results = @backend.lookup("cn=Fakey McFakename", {}, nil, :priority)
+          results.should be_nil
         end
       end
 
