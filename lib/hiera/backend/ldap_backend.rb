@@ -64,7 +64,7 @@ class Hiera
               end
             end
           rescue Exception => e
-            Hiera.debug("Exception: #{e}")
+            Hiera.warning("Exception: #{e}")
           end
           Hiera.debug(answer)
 
