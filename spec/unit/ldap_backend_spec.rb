@@ -57,6 +57,11 @@ class Hiera
           results = @backend.lookup("cn=Fakey McFakename", {}, nil, :priority)
           results.should be_nil
         end
+
+        it "should catch errors from LDAP and output them as debug messages" do
+          Hiera.expects(:debug).with("Exception: Invalid filter syntax.")
+          results = @backend.lookup("[][]", {}, nil, :priority)
+        end
       end
 
     end
