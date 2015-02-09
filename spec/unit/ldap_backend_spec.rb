@@ -59,7 +59,7 @@ class Hiera
         end
 
         it "should catch errors from LDAP and output them as debug messages" do
-          Hiera.expects(:debug).with("Exception: Invalid filter syntax.")
+          Hiera.expects(:warn).with("Exception: Invalid filter syntax.")
           results = @backend.lookup("[][]", {}, nil, :priority)
         end
       end
