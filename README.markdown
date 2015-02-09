@@ -1,4 +1,5 @@
 # hiera-ldap backend
+[![Build Status](https://travis-ci.org/hunner/hiera-ldap.svg)](https://travis-ci.org/hunner/hiera-ldap)
 
 This module allows hiera to look up entries in LDAP. It will return an array of every matching entry, with that entry represented as a hash of attribute => value. For multivalued attributes, they exist as multiattribute => [attrib1, attrib2, attrib3].
 
