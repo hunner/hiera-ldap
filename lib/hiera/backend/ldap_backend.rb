@@ -3,10 +3,11 @@ require 'net/ldap'
 
 # Monkey patch Net::LDAP::Connection to ensure SSL certs aren't verified
 class Net::LDAP::Connection
-  def self.wrap_with_ssl(io)
+  def self.wrap_with_ssl(io, tls_options = {})
     raise Net::LDAP::LdapError, "OpenSSL is unavailable" unless Net::LDAP::HasOpenSSL
     ctx = OpenSSL::SSL::SSLContext.new
     ctx.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    ctx.set_params(tls_options) unless tls_options.empty?
     conn = OpenSSL::SSL::SSLSocket.new(io, ctx)
     conn.connect
     conn.sync_close = true
@@ -51,8 +52,7 @@ class Hiera
           begin
             filter = Net::LDAP::Filter.from_rfc4515(key)
             treebase = conf[:base]
-            searchresult = @connection.search(:filter => filter)
-
+            searchresult = @connection.search(:filter => filter) || []
             for i in 0..searchresult.length-1 do
               answer[i] = {}
               searchresult[i].each do |attribute, values|
